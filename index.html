@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Créditos - Natillera</title>
+  
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- SheetJS for Excel Export/Import -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
+
+  <!-- TOP HEADER -->
+  <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo & Title -->
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('dashboard')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-md">
+            <i class="fa-solid fa-hand-holding-dollar text-xl text-white"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="font-bold text-lg leading-tight tracking-wide text-white">Control de Créditos</h1>
+              <span class="bg-emerald-500/20 text-emerald-300 text-xs px-2 py-0.5 rounded-full font-medium border border-emerald-500/30">Natillera</span>
+            </div>
+            <p class="text-xs text-slate-400">Admin: <span class="text-slate-200 font-medium" id="headerAdminName">Santiago</span> • En tiempo real</p>
+          </div>
+        </div>
+
+        <!-- Date Control & Top Actions -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Live Date Picker -->
+          <div class="hidden sm:flex items-center bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
+            <i class="fa-regular fa-calendar-days mr-2 text-emerald-400"></i>
+            <span class="mr-1">Fecha Hoy:</span>
+            <input type="date" id="systemDateInput" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
+          </div>
+
+          <!-- Quick Actions Buttons -->
+          <button onclick="openModal('modalNuevoCredito')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 rounded-lg shadow transition flex items-center">
+            <i class="fa-solid fa-plus mr-1.5"></i>
+            <span class="hidden sm:inline">Nuevo</span> Crédito
+          </button>
+          
+          <button onclick="openModal('modalRegistrarAbono')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 rounded-lg shadow transition flex items-center">
+            <i class="fa-solid fa-money-bill-wave mr-1.5"></i>
+            <span class="hidden sm:inline">Registrar</span> Abono
+          </button>
+
+          <!-- Export Excel Quick Action -->
+          <button onclick="exportToExcel()" title="Exportar todo a Excel (.xlsx)" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 p-2 sm:px-3 sm:py-2 rounded-lg border border-slate-700 text-xs sm:text-sm font-medium transition flex items-center">
+            <i class="fa-solid fa-file-excel mr-0 sm:mr-1.5 text-base"></i>
+            <span class="hidden md:inline">Exportar Excel</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MAIN NAVIGATION TABS -->
+      <nav class="flex space-x-1 sm:space-x-4 border-t border-slate-800 pt-2 pb-2.5 overflow-x-auto text-sm">
+        <button id="nav-dashboard" onclick="switchTab('dashboard')" class="nav-tab px-3 py-1.5 rounded-lg font-medium text-white bg-slate-800 flex items-center space-x-2 transition whitespace-nowrap">
+          <i class="fa-solid fa-chart-pie text-emerald-400"></i>
+          <span>Dashboard General</span>
+        </button>
+        <button id="nav-socio" onclick="switchTab('socio')" class="nav-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center space-x-2 transition whitespace-nowrap">
+          <i class="fa-solid fa-user-group text-blue-400"></i>
+          <span>Ficha por Socio</span>
+        </button>
+        <button id="nav-simulador" onclick="switchTab('simulador')" class="nav-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center space-x-2 transition whitespace-nowrap">
+          <i class="fa-solid fa-calculator text-amber-400"></i>
+          <span>Simulador de Crédito</span>
+        </button>
+        <button id="nav-recibos" onclick="switchTab('recibos')" class="nav-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center space-x-2 transition whitespace-nowrap">
+          <i class="fa-solid fa-receipt text-indigo-400"></i>
+          <span>Recibos & Paz y Salvo</span>
+        </button>
+        <button id="nav-guia" onclick="switchTab('guia')" class="nav-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center space-x-2 transition whitespace-nowrap">
+          <i class="fa-solid fa-circle-question text-purple-400"></i>
+          <span>Guía de Uso & Reglas</span>
+        </button>
+        <button id="nav-config" onclick="switchTab('config')" class="nav-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center space-x-2 transition whitespace-nowrap">
+          <i class="fa-solid fa-gear text-slate-400"></i>
+          <span>Ajustes & Respaldo</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- TAB 1: DASHBOARD GENERAL -->
+    <div id="tab-dashboard" class="space-y-6">
+      <!-- Welcome Banner -->
+      <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 rounded-2xl p-6 text-white shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center space-x-2 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>Sistema Financiero Natillera</span>
+          </div>
+          <h2 class="text-2xl font-bold">Consolidado General de Créditos</h2>
+          <p class="text-slate-300 text-sm mt-1">Cálculo de intereses diarios en vivo al <span id="bannerCurrentDate" class="text-emerald-300 font-semibold">--</span>. Créditos cancelados se congelan a su fecha de liquidación.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="openModal('modalNuevoSocio')" class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl border border-slate-700 transition flex items-center shadow-sm">
+            <i class="fa-solid fa-user-plus mr-2 text-emerald-400"></i>
+            Nuevo Socio
+          </button>
+          <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition flex items-center shadow-sm">
+            <i class="fa-solid fa-download mr-2"></i>
+            Descargar Excel
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI CARDS GRID (Identical to Excel Row 4 & 5) -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <!-- 1. Total Prestado -->
+        <div class="card-kpi p-4">
+          <div class="flex items-center justify-between text-slate-500 text-xs mb-2">
+            <span>TOTAL PRESTADO</span>
+            <i class="fa-solid fa-vault text-emerald-600 text-sm"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-slate-900" id="kpiTotalPrestado">$0</div>
+          <div class="text-xs text-slate-500 mt-1">Histórico colocado</div>
+        </div>
+
+        <!-- 2. Capital en la Calle -->
+        <div class="card-kpi p-4 border-l-4 border-l-amber-500">
+          <div class="flex items-center justify-between text-slate-500 text-xs mb-2">
+            <span>CAPITAL EN CALLE</span>
+            <i class="fa-solid fa-hand-holding-dollar text-amber-500 text-sm"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-amber-600" id="kpiCapitalCalle">$0</div>
+          <div class="text-xs text-slate-500 mt-1">Saldo pendiente</div>
+        </div>
+
+        <!-- 3. Intereses Liquidados -->
+        <div class="card-kpi p-4">
+          <div class="flex items-center justify-between text-slate-500 text-xs mb-2">
+            <span>INT. LIQUIDADOS</span>
+            <i class="fa-solid fa-snowflake text-cyan-600 text-sm"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-cyan-700" id="kpiIntLiquidados">$0</div>
+          <div class="text-xs text-slate-500 mt-1">Congelados a pago</div>
+        </div>
+
+        <!-- 4. Intereses por Cobrar -->
+        <div class="card-kpi p-4">
+          <div class="flex items-center justify-between text-slate-500 text-xs mb-2">
+            <span>INT. POR COBRAR</span>
+            <i class="fa-solid fa-clock-rotate-left text-indigo-600 text-sm"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-indigo-600" id="kpiIntCobrar">$0</div>
+          <div class="text-xs text-slate-500 mt-1">Acumulados a hoy</div>
+        </div>
+
+        <!-- 5. Total por Cobrar Hoy -->
+        <div class="card-kpi p-4 border-l-4 border-l-rose-500">
+          <div class="flex items-center justify-between text-slate-500 text-xs mb-2">
+            <span>TOTAL POR COBRAR</span>
+            <i class="fa-solid fa-receipt text-rose-500 text-sm"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-rose-600" id="kpiTotalCobrar">$0</div>
+          <div class="text-xs text-slate-500 mt-1">Capital + Interés</div>
+        </div>
+
+        <!-- 6. Total Recaudado en Abonos -->
+        <div class="card-kpi p-4 border-l-4 border-l-emerald-500">
+          <div class="flex items-center justify-between text-slate-500 text-xs mb-2">
+            <span>TOTAL RECAUDADO</span>
+            <i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-emerald-600" id="kpiTotalRecaudado">$0</div>
+          <div class="text-xs text-slate-500 mt-1">Abonos recibidos</div>
+        </div>
+      </div>
+
+      <!-- CHARTS SECTION -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Distribution Chart -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">Cartera por Socio (Capital en Calle vs Recaudado)</h3>
+              <p class="text-xs text-slate-500">Comparativa directa por cada miembro activo</p>
+            </div>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">Finanzas</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chartCarteraSocios"></canvas>
+          </div>
+        </div>
+
+        <!-- Doughnut Distribution -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">Distribución de Saldos</h3>
+              <p class="text-xs text-slate-500">Estado de recuperación</p>
+            </div>
+            <i class="fa-solid fa-chart-donut text-emerald-600"></i>
+          </div>
+          <div class="h-64 relative flex items-center justify-center">
+            <canvas id="chartStatusPie"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONSOLIDATED SOCIOS TABLE -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <!-- Table Header & Controls -->
+        <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h3 class="font-bold text-slate-900 text-lg flex items-center">
+              <i class="fa-solid fa-users text-emerald-600 mr-2"></i>
+              Consolidado de Socios y Estado de Cuenta General
+            </h3>
+            <p class="text-xs text-slate-500">Resumen consolidado automático idéntico a la pestaña 'Dashboard' de Excel</p>
+          </div>
+
+          <!-- Search & Filter Controls -->
+          <div class="flex items-center space-x-2">
+            <div class="relative">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+              <input type="text" id="searchSocioInput" onkeyup="filterSociosTable()" placeholder="Buscar socio..." class="pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 w-44 sm:w-56">
+            </div>
+            <select id="filterEstadoSocio" onchange="filterSociosTable()" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="ALL">Todos los estados</option>
+              <option value="CON DEUDA">Con Deuda</option>
+              <option value="PAZ Y SALVO">Paz y Salvo</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Responsive Table Container -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse" id="tablaSociosDashboard">
+            <thead>
+              <tr class="bg-slate-50/80 text-slate-600 text-xs uppercase tracking-wider font-semibold border-b border-slate-200">
+                <th class="py-3 px-4">N°</th>
+                <th class="py-3 px-4">Socio / Nombre</th>
+                <th class="py-3 px-4 text-right">Capital Prestado</th>
+                <th class="py-3 px-4 text-right">Capital en Calle</th>
+                <th class="py-3 px-4 text-right">Int. Liquidados</th>
+                <th class="py-3 px-4 text-right">Int. por Cobrar</th>
+                <th class="py-3 px-4 text-right">Total por Cobrar</th>
+                <th class="py-3 px-4 text-right">Total Abonado</th>
+                <th class="py-3 px-4 text-center">Estado</th>
+                <th class="py-3 px-4 text-center">N° Créditos</th>
+                <th class="py-3 px-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-sm" id="tbodySociosDashboard">
+              <!-- Dynamically populated -->
+            </tbody>
+            <tfoot>
+              <tr class="bg-slate-900 text-white font-bold text-sm" id="tfootSociosDashboard">
+                <!-- Dynamically populated totals row -->
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: FICHA POR SOCIO -->
+    <div id="tab-socio" class="space-y-6 hidden">
+      <!-- Socio Selector & Actions Bar -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg" id="socioAvatar">
+            JG
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <label for="socioSelect" class="text-xs text-slate-400 uppercase font-semibold">Seleccionar Socio:</label>
+              <span id="socioStatusBadge" class="badge badge-vigente">Activo</span>
+            </div>
+            <select id="socioSelect" onchange="onSocioSelected(this.value)" class="text-base font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 mt-0.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="openModalCreditoForCurrentSocio()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-medium px-3 py-2 rounded-lg transition flex items-center shadow-sm">
+            <i class="fa-solid fa-plus mr-1.5"></i>
+            Nuevo Crédito
+          </button>
+          <button onclick="openModalAbonoForCurrentSocio()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-medium px-3 py-2 rounded-lg transition flex items-center shadow-sm">
+            <i class="fa-solid fa-money-bill-transfer mr-1.5"></i>
+            Abonar a este Socio
+          </button>
+          <button onclick="imprimirFichaSocio()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-medium px-3 py-2 rounded-lg border border-slate-200 transition flex items-center">
+            <i class="fa-solid fa-print mr-1.5"></i>
+            Imprimir Ficha
+          </button>
+          <button onclick="generarPazYSalvoCurrentSocio()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs sm:text-sm font-medium px-3 py-2 rounded-lg border border-amber-200 transition flex items-center">
+            <i class="fa-solid fa-certificate mr-1.5 text-amber-600"></i>
+            Paz y Salvo
+          </button>
+        </div>
+      </div>
+
+      <!-- SOCIO KPI SUMMARY -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-slate-400 text-xs block">TOTAL PRESTADO</span>
+          <span class="text-base font-bold text-slate-800" id="socioKpiPrestado">$0</span>
+        </div>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-amber-500">
+          <span class="text-slate-400 text-xs block">CAPITAL EN CALLE</span>
+          <span class="text-base font-bold text-amber-600" id="socioKpiCapitalCalle">$0</span>
+        </div>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-slate-400 text-xs block">INT. LIQUIDADOS</span>
+          <span class="text-base font-bold text-cyan-700" id="socioKpiIntLiquidados">$0</span>
+        </div>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-slate-400 text-xs block">INT. POR COBRAR</span>
+          <span class="text-base font-bold text-indigo-600" id="socioKpiIntCobrar">$0</span>
+        </div>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-rose-500">
+          <span class="text-slate-400 text-xs block">TOTAL POR COBRAR</span>
+          <span class="text-base font-bold text-rose-600" id="socioKpiTotalCobrar">$0</span>
+        </div>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-emerald-500">
+          <span class="text-slate-400 text-xs block">TOTAL RECAUDADO</span>
+          <span class="text-base font-bold text-emerald-600" id="socioKpiTotalRecaudado">$0</span>
+        </div>
+      </div>
+
+      <!-- SECTION: TABLA DE CRÉDITOS Y LIQUIDACIÓN -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i class="fa-solid fa-table-list"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-base">Tabla de Créditos y Liquidación</h3>
+              <p class="text-xs text-slate-500">Intereses calculados a hoy o congelados a la fecha de liquidación</p>
+            </div>
+          </div>
+          <button onclick="openModalCreditoForCurrentSocio()" class="text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium px-3 py-1.5 rounded-lg border border-emerald-200 transition">
+            <i class="fa-solid fa-plus mr-1"></i> Agregar Crédito
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                <th class="py-3 px-3">N°</th>
+                <th class="py-3 px-3">Fecha Crédito</th>
+                <th class="py-3 px-3">Fecha Pago</th>
+                <th class="py-3 px-2 text-center">Días</th>
+                <th class="py-3 px-3 text-right">Capital</th>
+                <th class="py-3 px-2 text-center">Tasa</th>
+                <th class="py-3 px-3 text-right">Int. a Hoy</th>
+                <th class="py-3 px-3 text-right">Int. Fecha Pago</th>
+                <th class="py-3 px-3 text-right">Abono Int.</th>
+                <th class="py-3 px-3 text-right">Saldo Int.</th>
+                <th class="py-3 px-3 text-right">Abono Cap.</th>
+                <th class="py-3 px-3 text-right">Saldo Cap.</th>
+                <th class="py-3 px-3 text-right font-bold text-slate-900">Total a Pagar</th>
+                <th class="py-3 px-2 text-center">Estado</th>
+                <th class="py-3 px-3 text-center no-print">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="tbodySocioCreditos">
+              <!-- Dynamically populated -->
+            </tbody>
+            <tfoot>
+              <tr class="bg-slate-900 text-white font-bold text-xs" id="tfootSocioCreditos">
+                <!-- Dynamically populated totals -->
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION: REGISTRO DE ABONOS RECIBIDOS -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <i class="fa-solid fa-receipt"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-base">Registro de Abonos Recibidos</h3>
+              <p class="text-xs text-slate-500">Historial detallado de pagos a interés y capital</p>
+            </div>
+          </div>
+          <button onclick="openModalAbonoForCurrentSocio()" class="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium px-3 py-1.5 rounded-lg border border-blue-200 transition">
+            <i class="fa-solid fa-plus mr-1"></i> Registrar Abono
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                <th class="py-3 px-3">Fecha Abono</th>
+                <th class="py-3 px-2 text-center">N° Crédito</th>
+                <th class="py-3 px-3 text-right">Abono Interés</th>
+                <th class="py-3 px-3 text-right">Abono Capital</th>
+                <th class="py-3 px-3 text-right font-bold text-slate-800">Total Abonado</th>
+                <th class="py-3 px-4">Medio / Comprobante / Detalle</th>
+                <th class="py-3 px-3 text-center no-print">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="tbodySocioAbonos">
+              <!-- Dynamically populated -->
+            </tbody>
+            <tfoot>
+              <tr class="bg-slate-100 text-slate-800 font-bold text-xs" id="tfootSocioAbonos">
+                <!-- Dynamically populated totals -->
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: SIMULADOR DE CRÉDITO -->
+    <div id="tab-simulador" class="space-y-6 hidden">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-3xl mx-auto">
+        <div class="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100">
+          <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-calculator"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Simulador de Crédito & Liquidación</h2>
+            <p class="text-xs text-slate-500">Calcula los intereses exactos por días de cualquier préstamo en la Natillera</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Monto del Préstamo (Capital)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2.5 text-slate-400 font-semibold">$</span>
+                <input type="number" id="simCapital" value="1000000" step="50000" oninput="recalculateSimulation()" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold text-slate-800">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Fecha de Desembolso</label>
+              <input type="date" id="simFechaInicio" onchange="recalculateSimulation()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-800">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Fecha de Pago Estimada</label>
+              <input type="date" id="simFechaFin" onchange="recalculateSimulation()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-800">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tasa Mensual (%)</label>
+              <div class="flex items-center space-x-2">
+                <input type="number" id="simTasa" value="0.5" step="0.1" oninput="recalculateSimulation()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold text-slate-800">
+                <span class="text-sm font-semibold text-slate-600">% mensual</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">Regla natillera: 0.5% mensual (0.005 en decimal)</p>
+            </div>
+          </div>
+
+          <!-- Simulation Result Box -->
+          <div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white flex flex-col justify-between shadow-lg">
+            <div>
+              <div class="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">Resultado del Cálculo</div>
+              <div class="text-sm text-slate-300">Total a liquidar:</div>
+              <div class="text-3xl font-extrabold text-white mt-1" id="simTotalPagar">$0</div>
+            </div>
+
+            <div class="space-y-2 py-4 border-y border-slate-700/60 my-4 text-xs">
+              <div class="flex justify-between text-slate-300">
+                <span>Días transcurridos:</span>
+                <span class="font-bold text-white" id="simDias">0 días</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Interés diario generado:</span>
+                <span class="font-bold text-white" id="simIntDiario">$0 / día</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Interés total acumulado:</span>
+                <span class="font-bold text-amber-300 text-sm" id="simIntTotal">$0</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Capital original:</span>
+                <span class="font-bold text-white" id="simCapitalRes">$0</span>
+              </div>
+            </div>
+
+            <button onclick="convertirSimulacionACredito()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold py-2.5 rounded-xl shadow transition text-sm flex items-center justify-center">
+              <i class="fa-solid fa-plus-circle mr-2"></i> Crear Crédito con estos Datos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: RECIBOS & PAZ Y SALVO -->
+    <div id="tab-recibos" class="space-y-6 hidden">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-4xl mx-auto">
+        <div class="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100">
+          <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-receipt"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Generador de Recibos y Paz y Salvo</h2>
+            <p class="text-xs text-slate-500">Copia comprobantes formateados listos para enviar por WhatsApp o imprimir</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Selection & Options -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Seleccionar Socio</label>
+              <select id="receiptSocioSelect" onchange="updateReceiptGenerator()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tipo de Documento</label>
+              <select id="receiptTypeSelect" onchange="updateReceiptGenerator()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                <option value="estado_cuenta">Estado de Cuenta Completo</option>
+                <option value="paz_y_salvo">Certificado de Paz y Salvo</option>
+                <option value="ultimo_abono">Comprobante de Último Abono</option>
+              </select>
+            </div>
+
+            <div class="pt-4 flex flex-col gap-2">
+              <button onclick="copiarMensajeWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl shadow transition text-sm flex items-center justify-center">
+                <i class="fa-brands fa-whatsapp text-lg mr-2"></i> Copiar Formato WhatsApp
+              </button>
+              <button onclick="abrirWhatsAppWeb()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2.5 rounded-xl shadow transition text-sm flex items-center justify-center">
+                <i class="fa-solid fa-arrow-up-right-from-square mr-2"></i> Abrir en WhatsApp Web
+              </button>
+              <button onclick="window.print()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl border border-slate-200 transition text-sm flex items-center justify-center">
+                <i class="fa-solid fa-print mr-2"></i> Imprimir o Guardar PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- Preview Box -->
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between">
+            <div>
+              <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+                <span>Vista Previa del Mensaje</span>
+                <span class="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded">WhatsApp</span>
+              </div>
+              <pre id="receiptPreviewText" class="text-xs font-mono text-slate-800 whitespace-pre-wrap bg-white p-4 rounded-xl border border-slate-200 overflow-y-auto max-h-72"></pre>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-2 text-center">
+              💡 Puedes editar el texto antes de enviarlo o pegarlo directamente en WhatsApp.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: GUÍA DE USO & REGLAS -->
+    <div id="tab-guia" class="space-y-6 hidden">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-4xl mx-auto">
+        <div class="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100">
+          <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-lightbulb"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Guía de Uso para Santiago y Reglas Financieras</h2>
+            <p class="text-xs text-slate-500">Explicación exacta de cómo funciona el cálculo de intereses y las liquidaciones</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Rule 1 -->
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white transition">
+            <div class="flex items-center space-x-2 text-emerald-600 font-bold text-sm mb-1">
+              <i class="fa-solid fa-circle-check"></i>
+              <h4>1. Congelar Intereses a Fecha de Pago</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Cuando un socio liquide o termine de pagar su crédito, se registra la <strong>Fecha de Pago</strong>. Al registrarla, la aplicación calcula los intereses <em>exactos</em> generados desde la fecha inicial hasta ese día específico y se <strong>congelan</strong>. Ya no suma días ni intereses adicionales.
+            </p>
+          </div>
+
+          <!-- Rule 2 -->
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white transition">
+            <div class="flex items-center space-x-2 text-blue-600 font-bold text-sm mb-1">
+              <i class="fa-solid fa-bolt"></i>
+              <h4>2. Intereses en Vivo (Fecha de Hoy)</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Para créditos abiertos (sin fecha de pago registrada), la aplicación calcula automáticamente los días transcurridos hasta el día de hoy con la fórmula:
+              <code class="block bg-slate-200 text-slate-800 p-1.5 rounded mt-1 font-mono text-[11px]">= Capital × (Tasa / 30) × (Fecha Hoy - Fecha Crédito)</code>
+            </p>
+          </div>
+
+          <!-- Rule 3 -->
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white transition">
+            <div class="flex items-center space-x-2 text-indigo-600 font-bold text-sm mb-1">
+              <i class="fa-solid fa-layer-group"></i>
+              <h4>3. Registro de Múltiples Abonos Parciales</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Un crédito puede recibir todos los abonos parciales que sean necesarios (1, 2, 5 o más). Cada abono especifica cuánto se abona a intereses y cuánto a capital con su medio de pago. La tabla suma automáticamente todos los abonos por cada crédito.
+            </p>
+          </div>
+
+          <!-- Rule 4 -->
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white transition">
+            <div class="flex items-center space-x-2 text-amber-600 font-bold text-sm mb-1">
+              <i class="fa-solid fa-scale-balanced"></i>
+              <h4>4. Saldo y Liquidación Definitiva</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              El saldo de interés detecta automáticamente el estado: si tiene fecha de pago, liquida contra los intereses congelados; si está abierto, liquida contra los intereses del día de hoy. Cuando el saldo llega a cero o se registra la fecha de liquidación, pasa a estado <strong>PAGADO</strong>.
+            </p>
+          </div>
+        </div>
+
+        <!-- Banner for new partners -->
+        <div class="mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-start space-x-3">
+          <i class="fa-solid fa-user-plus text-emerald-600 text-base mt-0.5"></i>
+          <div>
+            <span class="font-bold block text-sm">¿Cómo agregar una nueva persona en la aplicación?</span>
+            Basta con hacer clic en el botón <strong>"Nuevo Socio"</strong> en la parte superior. Al crearlo, se le asigna su propia ficha individual y se consolida automáticamente en el Dashboard general sin necesidad de crear fórmulas manuales.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: AJUSTES & RESPALDO -->
+    <div id="tab-config" class="space-y-6 hidden">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-3xl mx-auto">
+        <div class="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100">
+          <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Configuración & Copias de Seguridad</h2>
+            <p class="text-xs text-slate-500">Tus datos se guardan automáticamente en tu navegador. Puedes exportar copias en cualquier momento.</p>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <!-- Parameter Configuration -->
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-4">
+            <h3 class="font-bold text-slate-800 text-sm">Parámetros del Sistema</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre del Administrador</label>
+                <input type="text" id="configAdminName" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Tasa de Interés Mensual por Defecto (%)</label>
+                <input type="number" id="configDefaultRate" step="0.1" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500">
+              </div>
+            </div>
+            <button onclick="saveSystemConfig()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm">
+              Guardar Parámetros
+            </button>
+          </div>
+
+          <!-- Backup & Export -->
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+            <h3 class="font-bold text-slate-800 text-sm">Copias de Seguridad (Backup)</h3>
+            <p class="text-xs text-slate-500">Descarga tus datos para guardarlos en tu computador o pasarlos a otro dispositivo.</p>
+            <div class="flex flex-wrap gap-3 pt-2">
+              <button onclick="exportToExcel()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition flex items-center shadow-sm">
+                <i class="fa-solid fa-file-excel mr-2"></i> Exportar a Excel (.xlsx)
+              </button>
+              <button onclick="exportBackupJSON()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition flex items-center shadow-sm">
+                <i class="fa-solid fa-file-code mr-2"></i> Exportar Copia JSON (.json)
+              </button>
+              <label class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition flex items-center shadow-sm cursor-pointer">
+                <i class="fa-solid fa-upload mr-2"></i> Importar Copia JSON
+                <input type="file" id="importJsonInput" accept=".json" onchange="importBackupJSON(event)" class="hidden">
+              </label>
+            </div>
+          </div>
+
+          <!-- Factory Reset -->
+          <div class="p-4 rounded-xl border border-rose-200 bg-rose-50/50 space-y-2">
+            <h3 class="font-bold text-rose-800 text-sm">Restablecer Datos Iniciales de Fábrica</h3>
+            <p class="text-xs text-rose-600">Si deseas borrar los cambios locales y volver a cargar exactamente los datos originales del archivo Excel original (Jorge, Caro, Andrés, Wilson), usa esta opción.</p>
+            <button onclick="confirmResetToInitialData()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
+              <i class="fa-solid fa-rotate-left mr-1"></i> Restablecer a Datos de Excel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 mt-auto no-print">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>
+        Sistema de Control de Créditos Natillera • Adaptado de <strong>Plantilla_Control_Creditos_Natillera.xlsx</strong>
+      </div>
+      <div class="flex items-center space-x-3 text-slate-400">
+        <a href="https://github.com/shenao356/creditos_natillera" target="_blank" class="hover:text-emerald-600 transition flex items-center">
+          <i class="fa-brands fa-github text-sm mr-1"></i> Repositorio GitHub
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- MODAL: NUEVO CRÉDITO -->
+  <div id="modalNuevoCredito" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-plus-circle text-emerald-400"></i>
+          <h3 class="font-bold text-base">Registrar Nuevo Crédito</h3>
+        </div>
+        <button onclick="closeModal('modalNuevoCredito')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="formNuevoCredito" onsubmit="handleNuevoCreditoSubmit(event)" class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Socio / Deudor *</label>
+          <select id="ncSocioId" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500">
+            <!-- Populated -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Monto del Préstamo (Capital) *</label>
+          <div class="relative">
+            <span class="absolute left-3 top-2.5 text-slate-400 font-semibold">$</span>
+            <input type="number" id="ncCapital" required min="1000" step="1000" placeholder="Ej: 500000" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Fecha Crédito *</label>
+            <input type="date" id="ncFechaCredito" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tasa Mensual (%)</label>
+            <input type="number" id="ncTasa" value="0.5" step="0.1" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeModal('modalNuevoCredito')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow transition">
+            Guardar Crédito
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTRAR ABONO -->
+  <div id="modalRegistrarAbono" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-money-bill-transfer text-blue-400"></i>
+          <h3 class="font-bold text-base">Registrar Abono</h3>
+        </div>
+        <button onclick="closeModal('modalRegistrarAbono')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="formRegistrarAbono" onsubmit="handleRegistrarAbonoSubmit(event)" class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Socio *</label>
+          <select id="abSocioId" required onchange="onAbonoSocioChange(this.value)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500">
+            <!-- Populated -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Aplicar a Crédito N° *</label>
+          <select id="abCreditoId" required onchange="onAbonoCreditoChange(this.value)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500">
+            <!-- Populated based on selected socio -->
+          </select>
+          <div id="abCreditoInfo" class="text-[11px] text-slate-500 mt-1 font-mono"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Fecha del Abono *</label>
+          <input type="date" id="abFechaPago" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Abono a Intereses</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2 text-slate-400 font-semibold">$</span>
+              <input type="number" id="abMontoInteres" min="0" step="1" value="0" class="w-full pl-8 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Abono a Capital</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2 text-slate-400 font-semibold">$</span>
+              <input type="number" id="abMontoCapital" min="0" step="1" value="0" class="w-full pl-8 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Medio de Pago / Comprobante / Nota</label>
+          <input type="text" id="abComprobante" placeholder="Ej: Transferencia Nequi, Bancolombia, WhatsApp, Efectivo..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeModal('modalRegistrarAbono')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow transition">
+            Registrar Abono
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: LIQUIDAR / CONGELAR CRÉDITO -->
+  <div id="modalLiquidarCredito" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-snowflake text-cyan-400"></i>
+          <h3 class="font-bold text-base">Liquidar & Congelar Crédito</h3>
+        </div>
+        <button onclick="closeModal('modalLiquidarCredito')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <input type="hidden" id="liqSocioId">
+        <input type="hidden" id="liqCreditoId">
+
+        <div class="p-3 bg-cyan-50 border border-cyan-100 rounded-xl text-xs text-cyan-900 space-y-1">
+          <div class="font-bold" id="liqCreditoTitle">Crédito N° 1 - Jorge Gaviria</div>
+          <div>Capital original: <span class="font-bold" id="liqCapitalOrig">$0</span></div>
+          <div>Saldo Capital actual: <span class="font-bold" id="liqSaldoCapActual">$0</span></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Fecha de Pago / Liquidación *</label>
+          <input type="date" id="liqFechaPago" onchange="recalculateLiquidationPreview()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-cyan-500">
+          <p class="text-[11px] text-slate-400 mt-1">Al fijar esta fecha, los intereses se congelarán definitivamente.</p>
+        </div>
+
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Días transcurridos calculados:</span>
+            <span class="font-bold text-slate-800" id="liqPreviewDias">0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Intereses congelados a esa fecha:</span>
+            <span class="font-bold text-cyan-700" id="liqPreviewInteres">$0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Saldo pendiente de intereses:</span>
+            <span class="font-bold text-slate-800" id="liqPreviewSaldoInt">$0</span>
+          </div>
+          <div class="flex justify-between border-t border-slate-200 pt-2 font-bold text-sm">
+            <span class="text-slate-900">Total a liquidar definitivo:</span>
+            <span class="text-emerald-600" id="liqPreviewTotal">$0</span>
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-between">
+          <button type="button" onclick="desmarcarLiquidacionCredito()" class="text-xs text-rose-600 hover:underline">
+            Desmarcar fecha de pago
+          </button>
+          <div class="flex space-x-2">
+            <button type="button" onclick="closeModal('modalLiquidarCredito')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+              Cerrar
+            </button>
+            <button type="button" onclick="confirmarLiquidacionCredito()" class="px-5 py-2 text-xs font-semibold text-white bg-cyan-700 hover:bg-cyan-600 rounded-xl shadow transition">
+              Congelar Liquidación
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NUEVO SOCIO -->
+  <div id="modalNuevoSocio" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-user-plus text-emerald-400"></i>
+          <h3 class="font-bold text-base">Agregar Nuevo Socio</h3>
+        </div>
+        <button onclick="closeModal('modalNuevoSocio')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="formNuevoSocio" onsubmit="handleNuevoSocioSubmit(event)" class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nombre Completo del Socio *</label>
+          <input type="text" id="nsNombre" required placeholder="Ej: María Camila Valencia" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeModal('modalNuevoSocio')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow transition">
+            Crear Socio
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center space-x-3 text-sm">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+    <span id="toastMsg">Operación realizada con éxito</span>
+  </div>
+
+  <!-- SCRIPT FILES -->
+  <script src="initialData.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
